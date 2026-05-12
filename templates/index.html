@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Evaluador de Candidatos</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="layout">
+        <div class="card">
+            <h2>Evaluar candidato</h2>
+
+            {% if error %}
+                <div class="error-msg">⚠️ {{ error }}</div>
+            {% endif %}
+
+            <form action="/evaluar" method="POST">
+                <label>Nombre</label>
+                <input type="text" name="nombre" placeholder="Ej. María García" required>
+
+                <label>Experiencia (años)</label>
+                <input type="number" name="experiencia_anos" step="0.5" min="0" required>
+
+                <label>Nivel educativo</label>
+                <select name="nivel_educativo">
+                    <option value="0">Sin estudios</option>
+                    <option value="1">Bachillerato</option>
+                    <option value="2">Técnico / Tecnólogo</option>
+                    <option value="3">Universitario</option>
+                    <option value="4">Posgrado</option>
+                </select>
+
+                <label>¿Ha trabajado en el sector?</label>
+                <select name="ha_trabajado_en_sector">
+                    <option value="1">Sí</option>
+                    <option value="0">No</option>
+                </select>
+
+                <label>Disponibilidad inmediata</label>
+                <select name="disponibilidad_inmediata">
+                    <option value="1">Sí</option>
+                    <option value="0">No</option>
+                </select>
+
+                <label>¿Vive cerca?</label>
+                <select name="vive_cerca">
+                    <option value="1">Sí</option>
+                    <option value="0">No</option>
+                </select>
+
+                <label>¿Acepta turnos?</label>
+                <select name="acepta_turnos">
+                    <option value="1">Sí</option>
+                    <option value="0">No</option>
+                </select>
+
+                <label>¿Documentos completos?</label>
+                <select name="documentos_completos">
+                    <option value="1">Sí</option>
+                    <option value="0">No</option>
+                </select>
+
+                <label>¿Referido interno?</label>
+                <select name="referido_interno">
+                    <option value="1">Sí</option>
+                    <option value="0">No</option>
+                </select>
+
+                <button type="submit" class="btn-submit">Evaluar candidato</button>
+            </form>
+        </div>
+
+    <!-- Historial -->
+        <div>
+            <div class="card" style="padding-bottom: 1rem;">
+                <div class="historial-header">
+                    <h2>Historial de evaluaciones ({{ evaluaciones|length }})</h2>
+                    {% if evaluaciones %}
+                        <form action="/limpiar" method="POST" style="margin:0">
+                            <button type="submit" class="btn-limpiar">Limpiar todo</button>
+                        </form>
+                    {% endif %}
+                </div>
+
+                {% if not evaluaciones %}
+                    <div class="empty-state">Aún no hay evaluaciones. ¡Agrega tu primer candidato!</div>
+                {% else %}
+                    {% for e in evaluaciones | reverse %}
+                        <div class="candidato {{ e.resultado }}">
+                            <div>
+                                <div class="candidato-nombre">{{ e.nombre }}</div>
+                                <div class="info-grid">
+                                <div class="info-item">🎓 <span>{{ e.nivel_educativo }}</span></div>
+                                <div class="info-item">📅 <span>{{ e.experiencia_anos }} años exp.</span></div>
+                                <div class="info-item">🏭 Sector: <span>{{ e.sector }}</span></div>
+                                <div class="info-item">⚡ <span>{{ e.disponibilidad }}</span></div>
+                                <div class="info-item">📍 Cerca: <span>{{ e.vive_cerca }}</span></div>
+                                <div class="info-item">🌙 Turnos: <span>{{ e.acepta_turnos }}</span></div>
+                                <div class="info-item">📄 Docs: <span>{{ e.documentos }}</span></div>
+                                <div class="info-item">🤝 Referido: <span>{{ e.referido }}</span></div>
+                                </div>
+                            </div>
+                            <div>
+                                <span class="badge {{ e.resultado }}">{{ e.resultado }}</span>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
