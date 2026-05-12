@@ -189,6 +189,24 @@ select:focus {
   color: #333;
 }
 
+.disclaimer {
+  font-size: 0.82rem;
+  color: #555;
+  line-height: 1.45;
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.75rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border-left: 3px solid #64748b;
+}
+
+.disclaimer code {
+  font-size: 0.8rem;
+  background: #e2e8f0;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
 /* ── Error ── */
 .error-msg {
   background: #fee2e2;

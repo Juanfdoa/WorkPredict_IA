@@ -56,34 +56,34 @@ El dataset en repo tiene del orden de **cientos de filas** (cabecera + ~800 lín
 
 ## 4. Modelo y entrenamiento (`model.py`)
 
-- Lee `data/dataset.csv`.
-- Partición: `train_test_split` con **`test_size=0.30`** y `random_state=42` (aprox. 70 % entrenamiento / 30 % prueba). *Nota: el informe Word menciona en un apartado 80/20; el código efectivo es 70/30.*
-- Clasificador: **`DecisionTreeClassifier(random_state=42)`** sin hiperparámetros adicionales explícitos.
-- Imprime `accuracy_score` y `classification_report` sobre el conjunto de prueba.
-- Incluye un ejemplo de predicción para un candidato sintético.
-- Las líneas **`joblib.dump(model, 'model.pkl')`** están **comentadas**; el repositorio incluye igualmente un **`model.pkl`** ya generado para uso con la app.
+- Lee `data/dataset.csv` y aplica preparación con **`dataset_normalize.py`**: etiquetas canónicas (Baja/Media/Alta), coerción de dominio en features, eliminación de filas inválidas y **deduplicación exacta** antes de entrenar.
+- Partición: `train_test_split` con **`test_size=0.30`** estratificada y `random_state=42` (70 % / 30 %). *Nota: el informe Word puede citar 80/20; el código efectivo es 70/30 — documentado en README.*
+- Comparación de modelos con **`GridSearchCV`**, validación cruzada **estratificada (5 folds)** y criterio **`f1_macro`**: `DecisionTreeClassifier`, `RandomForestClassifier`, `HistGradientBoostingClassifier`; se selecciona el mejor en CV sobre train.
+- Métricas en holdout: accuracy, F1 macro/por clase, `classification_report`, matriz de confusión.
+- Tras la selección, el mejor estimador se **reentrena con el 100 %** de las filas y se guarda con **`joblib.dump`** en **`model.pkl`**.
+- Columnas de features compartidas con la app: **`model_features.py`** (`FEATURE_COLUMNS`).
 
 ---
 
 ## 5. Aplicación web (`app.py` + plantillas)
 
 - Al arrancar, **`joblib.load('model.pkl')`**.
-- **`/`** (GET): muestra formulario e historial de evaluaciones guardado en **sesión Flask**.
-- **`/evaluar`** (POST): lee el formulario, construye un `DataFrame` de una fila con las mismas columnas que el entrenamiento, ejecuta `model.predict`, arma un registro legible (nombre, badges, traducción de códigos) y lo añade a `session['evaluaciones']`.
+- **`/`** (GET): muestra formulario e historial de evaluaciones guardado en **sesión Flask**; pasa `error` si hubo fallo en el último POST.
+- **`/evaluar`** (POST): lee el formulario, aplica **`coerce_prediction_row`** (mismas reglas de dominio que el entrenamiento), construye un `DataFrame` ordenado con `FEATURE_COLUMNS` de **`model_features.py`**, ejecuta `model.predict`, arma un registro legible y lo añade a `session['evaluaciones']`.
 - **`/limpiar`** (POST): borra el historial de sesión.
 - Mapeo de etiquetas de nivel educativo coherente con el dataset y el formulario.
 
 **Interfaz (`templates/index.html` + `static/css/style.css`):** layout en dos columnas (formulario + historial), badges por resultado (Alta/Media/Baja), botón limpiar. *El informe Word cita en la tabla de estructura `static/css/index.css`; en el repo el archivo real es **`static/css/style.css`**.*
 
-**Seguridad / operación:** `app.secret_key` está fijada en código (adecuado solo para desarrollo local). Para producción conviene variable de entorno.
+**Seguridad / operación:** `app.secret_key` usa **`os.environ.get('SECRET_KEY', ...)`** con valor por defecto solo para desarrollo; en producción definir `SECRET_KEY`.
 
-**Detalle de implementación:** en errores, `app.py` asigna `session['error']`, pero la plantilla usa `{% if error %}` sin pasar `error` desde `render_template`; el mensaje de error puede no mostrarse salvo que se corrija pasando `error=session.pop('error', None)` o similar.
+**Errores:** en GET `/`, se pasa **`error=session.pop('error', None)`** a la plantilla para mostrar fallos de `/evaluar`.
 
 ---
 
 ## 6. Cómo ejecutar (según README y código)
 
-1. **Entrenar / reentrenar:** `python model.py` (y descomentar `joblib.dump` si se desea sobrescribir `model.pkl`).
+1. **Entrenar / reentrenar:** `python model.py` (sobrescribe `model.pkl` al finalizar).
 2. **Probar la UI:** `python app.py` (modo debug según `if __name__ == '__main__'`).
 3. **Dependencias:** `pip install -r requirements.txt`.
 
@@ -92,8 +92,8 @@ El dataset en repo tiene del orden de **cientos de filas** (cabecera + ~800 lín
 ## 7. Marco teórico resumido (del documento Word)
 
 - IA y aprendizaje automático; énfasis en **aprendizaje supervisado** para clasificación.
-- **Árboles de decisión:** nodos como atributos, ramas como reglas, hojas como clase predicha.
-- **Métricas:** `classification_report` (precisión, recall, F1, soporte por clase) y `accuracy_score`.
+- **Árboles de decisión y ensambles:** el informe puede centrarse en árboles; el código de entrenamiento actual compara además **bosque aleatorio** e **histogram-based gradient boosting** (sklearn) con validación cruzada.
+- **Métricas:** `classification_report` (precisión, recall, F1, soporte por clase), `accuracy_score`, F1 macro y matriz de confusión en el holdout.
 - **joblib** para persistencia en `.pkl`.
 - **Flask + Jinja2** como capa de presentación ligera sobre el modelo.
 
@@ -111,7 +111,8 @@ El dataset en repo tiene del orden de **cientos de filas** (cabecera + ~800 lín
 
 ## 9. Estado actual útil para siguientes pasos
 
-- El **pipeline conceptual** (datos → árbol de decisión → `.pkl` → Flask) está cerrado y documentado en Word y README.
-- Ajustes posibles a alinear documentación y código: proporción train/test, nombre del CSS en el informe, flujo de errores en la UI, `secret_key` y persistencia del historial (hoy solo en sesión, se pierde al cerrar el navegador).
+- **Pipeline:** datos → comparación de modelos tabulares + CV → `model.pkl` → Flask; README y `context.md` alineados con 70/30, `style.css`, `SECRET_KEY` y errores en UI.
+- **Gobernanza:** ver **`ETHICS_AND_MODEL.md`** (model card y política de uso) y **`DATASET.md`** (esquema enriquecido y plan de recolección).
+- **Pendientes opcionales:** persistencia del historial fuera de sesión; si el informe Word sigue citando 80/20 o solo árboles de decisión, actualizar ese documento aparte del repo.
 
 Este archivo sirve como **mapa de contexto** para continuar el desarrollo o la revisión del proyecto sin depender de reabrir todos los orígenes.
